@@ -1,13 +1,13 @@
 # software-modem
 
-A software implementation of a QAM/OFDM model written in pure rust.
+A software implementation of a QAM/OFDM modem written in pure rust.
 
 The goal is have a fully working OFDM modulator and demodulator for use in RF Systems.
 
 ## Modules
 
 1. **QAM**:
-    The QAM modulator and demodulator, which maps bits to Complex Numbers representing amplitude/phase combinations.
+    The QAM modulator and demodulator, which maps bits to Complex Numbers representing amplitude/phase combinations and vice verca.
 
 2. **OFDM**
     1. **Modulator**
