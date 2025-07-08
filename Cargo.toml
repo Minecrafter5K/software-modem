@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 realfft = "3.5.0"
+smart-default = "0.7.1"
