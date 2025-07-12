@@ -11,7 +11,7 @@ const PILOT_VALUE_TO_BE_CHANGED: Complex32 = Complex32 { re: 1.0, im: 0.0 };
 ///
 /// With this modulator, you can modulate data into OFDM symbols.
 /// It supports QAM modulation and allows for pilot subcarriers.
-/// The modulator can be configured with the number of subcarriers, cycle prefix length,
+/// The modulator can be configured with the number of subcarriers, cyclic prefix length,
 /// pilot subcarrier interval, and QAM order.
 pub struct OFDMModulator {
     fft: Arc<dyn ComplexToReal<f32>>,
@@ -44,7 +44,7 @@ impl OFDMModulator {
             num_pilot_subcarriers,
             qam_order: config.qam_order,
             num_subcarriers,
-            cycle_prefix_length: config.cycle_prefix_length,
+            cyclic_prefix_length: config.cyclic_prefix_length,
             data_subcarrier_indices,
             pilot_subcarrier_indices,
             bits_per_subcarrier,
@@ -67,7 +67,7 @@ impl OFDMModulator {
     /// The data buffer must have a length equal to the number of bytes per symbol,
     /// which is determined by the QAM order and the number of data subcarriers.
     ///
-    /// The length of the output buffer must be double the total length of the OFDM symbol plus the cycle prefix length.
+    /// The length of the output buffer must be double the total length of the OFDM symbol plus the cyclic prefix length.
     /// You can calculate the expected length of the output buffer using `get_symbol_length()`.
     ///
     /// # Panics
@@ -85,7 +85,7 @@ impl OFDMModulator {
     ///
     /// let ofdm_modulator = OFDMModulator::new(OFDMModulatorConfig {
     ///   num_subcarriers: 64,
-    ///   cycle_prefix_length: 4,
+    ///   cyclic_prefix_length: 4,
     ///   pilot_subcarrier_every: 4,
     ///   qam_order: QAMOrder::QAM16,
     ///  fft: None,
@@ -135,21 +135,21 @@ impl OFDMModulator {
         self.fft.process(&mut input, &mut output_buffer).unwrap();
 
         // add cp
-        output[..self.get_symbol_length() - self.constants.cycle_prefix_length as usize]
+        output[..self.get_symbol_length() - self.constants.cyclic_prefix_length as usize]
             .copy_from_slice(&output_buffer);
 
-        output[self.get_symbol_length() - self.constants.cycle_prefix_length as usize..]
-            .copy_from_slice(&output_buffer[..self.constants.cycle_prefix_length as usize]);
+        output[self.get_symbol_length() - self.constants.cyclic_prefix_length as usize..]
+            .copy_from_slice(&output_buffer[..self.constants.cyclic_prefix_length as usize]);
 
         Ok(())
     }
 
-    /// Returns the length of the OFDM symbol, including the cycle prefix.
+    /// Returns the length of the OFDM symbol, including the cyclic prefix.
     ///
     /// The length is calculated as:
-    /// `2 * num_subcarriers + cycle_prefix_length`.
+    /// `2 * num_subcarriers + cyclic_prefix_length`.
     pub fn get_symbol_length(&self) -> usize {
-        (2 * self.constants.num_subcarriers + self.constants.cycle_prefix_length) as usize
+        (2 * self.constants.num_subcarriers + self.constants.cyclic_prefix_length) as usize
     }
 }
 
@@ -159,10 +159,10 @@ impl OFDMModulator {
 #[derive(SmartDefault)]
 pub struct OFDMModulatorConfig {
     pub num_subcarriers: u32,
-    /// Length of the cycle prefix in samples.
+    /// Length of the cyclic prefix in samples.
     ///
     /// One OFDM symbol double num_subcarriers samples. If you want to have a CP of 1/4 you need to set this to `(2 * num_subcarriers) / 4`
-    pub cycle_prefix_length: u32,
+    pub cyclic_prefix_length: u32,
     /// Interval for pilot subcarriers.
     ///
     /// Inserts pilot subcarriers every `pilot_subcarrier_every` subcarrier.
@@ -181,7 +181,7 @@ struct OFDMModulatorConstants {
     num_pilot_subcarriers: u32,
     qam_order: QAMOrder,
     num_subcarriers: u32,
-    cycle_prefix_length: u32,
+    cyclic_prefix_length: u32,
 
     data_subcarrier_indices: Vec<u32>,
     pilot_subcarrier_indices: Vec<u32>,
