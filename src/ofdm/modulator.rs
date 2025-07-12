@@ -3,17 +3,17 @@ use std::sync::Arc;
 use realfft::ComplexToReal;
 use smart_default::SmartDefault;
 
-use crate::qam::{QAMModulator, QAMOrder};
+use crate::qam::{QAMModem, QAMOrder};
 
 pub struct OFDMModulator {
     fft: Arc<dyn ComplexToReal<f32>>,
-    qam_modulator: QAMModulator,
+    qam_modulator: QAMModem,
     constants: OFDMModulatorConstants,
 }
 
 impl OFDMModulator {
     pub fn new(config: OFDMModulatorConfig) -> Self {
-        let qam_modulator = QAMModulator::new(config.qam_order);
+        let qam_modulator = QAMModem::new(config.qam_order);
 
         let num_subcarriers = config.num_subcarriers;
         let num_data_subcarriers = num_subcarriers - config.pilot_subcarrier_every;
