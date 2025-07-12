@@ -1,3 +1,8 @@
+//! This module provides the QAM (Quadrature Amplitude Modulation) implementation.
+//!
+//! Use the [QAMModem] struct to modulate and demodulate data into QAM symbols.
+//! See the [QAMOrder] enum for supported QAM orders.
+
 use core::panic;
 use std::fmt::Display;
 
