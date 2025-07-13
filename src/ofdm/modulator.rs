@@ -135,11 +135,12 @@ impl OFDMModulator {
         self.fft.process(&mut input, &mut output_buffer).unwrap();
 
         // add cp
-        output[..self.get_symbol_length() - self.constants.cyclic_prefix_length as usize]
-            .copy_from_slice(&output_buffer);
+        output[self.constants.cyclic_prefix_length as usize..].copy_from_slice(&output_buffer);
 
-        output[self.get_symbol_length() - self.constants.cyclic_prefix_length as usize..]
-            .copy_from_slice(&output_buffer[..self.constants.cyclic_prefix_length as usize]);
+        output[..self.constants.cyclic_prefix_length as usize].copy_from_slice(
+            &output_buffer
+                [(output_buffer.len() - (self.constants.cyclic_prefix_length as usize))..],
+        );
 
         Ok(())
     }
