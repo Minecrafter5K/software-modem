@@ -3,7 +3,10 @@ use std::sync::Arc;
 use realfft::{ComplexToReal, num_complex::Complex32};
 use smart_default::SmartDefault;
 
-use crate::qam::{QAMModem, QAMOrder};
+use crate::{
+    ofdm::OFDMConstants,
+    qam::{QAMModem, QAMOrder},
+};
 
 const PILOT_VALUE_TO_BE_CHANGED: Complex32 = Complex32 { re: 1.0, im: 0.0 };
 
@@ -15,49 +18,31 @@ const PILOT_VALUE_TO_BE_CHANGED: Complex32 = Complex32 { re: 1.0, im: 0.0 };
 /// pilot subcarrier interval, and QAM order.
 pub struct OFDMModulator {
     fft: Arc<dyn ComplexToReal<f32>>,
-    qam_modulator: QAMModem,
-    constants: OFDMModulatorConstants,
+    qam_modem: QAMModem,
+    constants: OFDMConstants,
 }
 
 impl OFDMModulator {
     /// Creates a new OFDM modulator with the given [configuration](OFDMModulatorConfig).
     pub fn new(config: OFDMModulatorConfig) -> Self {
-        let qam_modulator = QAMModem::new(config.qam_order);
+        let qam_modem = QAMModem::new(config.qam_order);
 
-        let num_subcarriers = config.num_subcarriers;
-
-        let pilot_subcarrier_indices: Vec<u32> = (1..num_subcarriers)
-            .filter(|&i| i % config.pilot_subcarrier_every == 0)
-            .collect();
-        let num_pilot_subcarriers = pilot_subcarrier_indices.len() as u32;
-
-        let data_subcarrier_indices: Vec<u32> = (1..num_subcarriers)
-            .filter(|&i| i % config.pilot_subcarrier_every != 0)
-            .collect();
-        let num_data_subcarriers = data_subcarrier_indices.len() as u32;
-
-        let bits_per_subcarrier = qam_modulator.bits_per_symbol();
-        let bits_per_symbol = num_data_subcarriers * bits_per_subcarrier;
-
-        let constants = OFDMModulatorConstants {
-            num_data_subcarriers,
-            num_pilot_subcarriers,
-            qam_order: config.qam_order,
-            num_subcarriers,
-            cyclic_prefix_length: config.cyclic_prefix_length,
-            data_subcarrier_indices,
-            pilot_subcarrier_indices,
-            bits_per_subcarrier,
-            bits_per_symbol,
-        };
+        let constants = OFDMConstants::new(
+            config.num_subcarriers,
+            config.pilot_subcarrier_every,
+            config.cyclic_prefix_length,
+            config.qam_order,
+            qam_modem.bits_per_symbol(),
+        );
 
         let fft = config.fft.unwrap_or_else(|| {
-            realfft::RealFftPlanner::<f32>::new().plan_fft_inverse(2 * num_subcarriers as usize)
+            realfft::RealFftPlanner::<f32>::new()
+                .plan_fft_inverse(2 * config.num_subcarriers as usize)
         });
 
         OFDMModulator {
             fft,
-            qam_modulator,
+            qam_modem,
             constants,
         }
     }
@@ -92,9 +77,7 @@ impl OFDMModulator {
     /// });
     ///
     /// let mut output_buffer = vec![0.0; ofdm_modulator.get_symbol_length()];
-    /// let mut data_buffer = vec![0; 32 - 6 - 2]; // 16 bytes for QAM16 * 64 Subcarriers minus 6 pilot subcarriers and first and last subcarrier
-    /// let test_data = "Hello, OFDM!";
-    /// data_buffer[..test_data.len()].copy_from_slice(test_data.as_bytes());
+    /// let mut data_buffer = "Hello, OFDM!            ".as_bytes(); // 32 bytes for QAM16 * 64 Subcarriers minus 6 pilot subcarriers and first and last subcarrier
     ///
     /// ofdm_modulator.modulate_buffer_as_symbol(&data_buffer, &mut output_buffer);
     /// ```
@@ -107,7 +90,7 @@ impl OFDMModulator {
             );
         }
 
-        let qam_symbols = self.qam_modulator.modulate(data);
+        let qam_symbols = self.qam_modem.modulate(data);
 
         self.modulate_ofdm_symbol(qam_symbols, output_buffer)
             .unwrap();
@@ -174,19 +157,4 @@ pub struct OFDMModulatorConfig {
     ///
     /// If `None`, a default FFT planner will be used.
     pub fft: Option<Arc<dyn ComplexToReal<f32>>>,
-}
-
-#[allow(dead_code)]
-struct OFDMModulatorConstants {
-    num_data_subcarriers: u32,
-    num_pilot_subcarriers: u32,
-    qam_order: QAMOrder,
-    num_subcarriers: u32,
-    cyclic_prefix_length: u32,
-
-    data_subcarrier_indices: Vec<u32>,
-    pilot_subcarrier_indices: Vec<u32>,
-
-    bits_per_subcarrier: u32,
-    bits_per_symbol: u32,
 }
